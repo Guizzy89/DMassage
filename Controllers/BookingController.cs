@@ -1,6 +1,5 @@
 ﻿using DMassage.Data;
 using DMassage.Models;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
@@ -19,35 +18,33 @@ namespace DMassage.Controllers
         // GET: Booking
         public async Task<IActionResult> Index()
         {
-            var bookings = await _context.Bookings.OrderByDescending(b => b.SlotDate).ToListAsync();
+            var bookings = await _context.Bookings.ToListAsync();
             return View(bookings);
         }
 
-        // Добавление нового сеанса (GET-запрос)
-        [Authorize(Roles = "Admin")]
-        [HttpGet]
+        // GET: Booking/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // Сохранение нового сеанса (POST-запрос)
-        [Authorize(Roles = "Admin")]
+        // POST: Booking/Create
         [HttpPost]
-        public async Task<IActionResult> Create(Booking booking)
+        public async Task<IActionResult> Create(DateTime slotDate, int durationInMinutes)
         {
-            if (ModelState.IsValid)
+            var booking = new Booking
             {
-                _context.Bookings.Add(booking);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(booking);
+                SlotDate = slotDate,
+                Duration = TimeSpan.FromMinutes(durationInMinutes),
+                IsAvailable = true
+            };
+
+            _context.Bookings.Add(booking);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
-        // Редактирование сеанса (GET-запрос)
-        [Authorize(Roles = "Admin")]
-        [HttpGet]
+        // GET: Booking/Edit/id
         public async Task<IActionResult> Edit(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
@@ -58,35 +55,24 @@ namespace DMassage.Controllers
             return View(booking);
         }
 
-        // Обновление данных сеанса (POST-запрос)
-        [Authorize(Roles = "Admin")]
+        // POST: Booking/Edit/id
         [HttpPost]
-        public async Task<IActionResult> Edit(int id, Booking booking)
+        public async Task<IActionResult> Edit(int id, DateTime slotDate, int durationInMinutes)
         {
-            if (id != booking.Id)
+            var booking = await _context.Bookings.FindAsync(id);
+            if (booking == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(booking);
-                    await _context.SaveChangesAsync();
-                }
-                catch (Exception e)
-                {
-                    return BadRequest(e.Message);
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            return View(booking);
+            booking.SlotDate = slotDate;
+            booking.Duration = TimeSpan.FromMinutes(durationInMinutes);
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
-        // Подтверждение удаления сеанса (GET-запрос)
-        [Authorize(Roles = "Admin")]
-        [HttpGet]
+        // GET: Booking/Delete/id
         public async Task<IActionResult> Delete(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
@@ -97,8 +83,7 @@ namespace DMassage.Controllers
             return View(booking);
         }
 
-        // Удаление сеанса (POST-запрос)
-        [Authorize(Roles = "Admin")]
+        // POST: Booking/Delete/id
         [HttpPost, ActionName("Delete")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
@@ -108,37 +93,6 @@ namespace DMassage.Controllers
                 _context.Bookings.Remove(booking);
                 await _context.SaveChangesAsync();
             }
-            return RedirectToAction(nameof(Index));
-        }
-
-        // Запись клиента на сеанс (GET-запрос)
-        [HttpGet]
-        public async Task<IActionResult> Confirm(int id)
-        {
-            var booking = await _context.Bookings.FindAsync(id);
-            if (booking == null || !booking.IsAvailable)
-            {
-                return NotFound();
-            }
-            return View(booking);
-        }
-
-        // Завершение процесса записи клиента (POST-запрос)
-        [HttpPost]
-        public async Task<IActionResult> Confirm(int id, string clientName, string phoneNumber, string comment)
-        {
-            var booking = await _context.Bookings.FindAsync(id);
-            if (booking == null || !booking.IsAvailable)
-            {
-                return NotFound();
-            }
-
-            booking.ClientName = clientName;
-            booking.PhoneNumber = phoneNumber;
-            booking.Comment = comment;
-            booking.IsAvailable = false;
-
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
     }
