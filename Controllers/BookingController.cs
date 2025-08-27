@@ -1,8 +1,9 @@
-﻿// Controllers/BookingController.cs
-using DMassage.Data;
+﻿using DMassage.Data;
 using DMassage.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 
 namespace DMassage.Controllers
 {
@@ -18,112 +19,127 @@ namespace DMassage.Controllers
         // GET: Booking
         public async Task<IActionResult> Index()
         {
-            var bookings = await _context.Bookings.Where(b => b.IsAvailable).ToListAsync();
-            return View(bookings); // Показываем доступные слоты
+            var bookings = await _context.Bookings.OrderByDescending(b => b.SlotDate).ToListAsync();
+            return View(bookings);
         }
 
-        // GET: Booking/Details/{id}
-        public async Task<IActionResult> Details(int id)
+        // Добавление нового сеанса (GET-запрос)
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
+        public IActionResult Create()
         {
-            var booking = await _context.Bookings.FindAsync(id);
-            if (booking == null)
-                return NotFound();
+            return View();
+        }
 
+        // Сохранение нового сеанса (POST-запрос)
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        public async Task<IActionResult> Create(Booking booking)
+        {
+            if (ModelState.IsValid)
+            {
+                _context.Bookings.Add(booking);
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index));
+            }
             return View(booking);
         }
 
-        // POST: Booking/Create
-        [HttpPost]
-        public async Task<IActionResult> Create([Bind("SlotDate,Duration")] Booking booking)
-        {
-            if (!ModelState.IsValid)
-                return View(booking);
-
-            booking.IsAvailable = true;
-            _context.Add(booking);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        // GET: Booking/Edit/{id}
+        // Редактирование сеанса (GET-запрос)
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
             if (booking == null)
+            {
                 return NotFound();
-
+            }
             return View(booking);
         }
 
-        // POST: Booking/Edit/{id}
+        // Обновление данных сеанса (POST-запрос)
+        [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,SlotDate,Duration,IsAvailable")] Booking booking)
+        public async Task<IActionResult> Edit(int id, Booking booking)
         {
-            if (!ModelState.IsValid || id != booking.Id)
+            if (id != booking.Id)
+            {
                 return BadRequest();
-
-            try
-            {
-                _context.Update(booking);
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                ModelState.AddModelError("", $"Ошибка сохранения: {ex.Message}");
-                return View(booking);
             }
 
-            return RedirectToAction(nameof(Index));
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    _context.Update(booking);
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception e)
+                {
+                    return BadRequest(e.Message);
+                }
+                return RedirectToAction(nameof(Index));
+            }
+            return View(booking);
         }
 
-        // GET: Booking/Delete/{id}
+        // Подтверждение удаления сеанса (GET-запрос)
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
         public async Task<IActionResult> Delete(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
             if (booking == null)
+            {
                 return NotFound();
-
+            }
             return View(booking);
         }
 
-        // POST: Booking/Delete/{id}
+        // Удаление сеанса (POST-запрос)
+        [Authorize(Roles = "Admin")]
         [HttpPost, ActionName("Delete")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
-            if (booking == null)
-                return NotFound();
-
-            _context.Remove(booking);
-            await _context.SaveChangesAsync();
+            if (booking != null)
+            {
+                _context.Bookings.Remove(booking);
+                await _context.SaveChangesAsync();
+            }
             return RedirectToAction(nameof(Index));
         }
 
-        // Получение полной информации по выбранному слоту
+        // Запись клиента на сеанс (GET-запрос)
+        [HttpGet]
         public async Task<IActionResult> Confirm(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
-            if (booking == null)
+            if (booking == null || !booking.IsAvailable)
+            {
                 return NotFound();
-
+            }
             return View(booking);
         }
 
-        // После внесения данных клиентом обновляем статус слота
+        // Завершение процесса записи клиента (POST-запрос)
         [HttpPost]
-        public async Task<IActionResult> Confirm(int id, [Bind("ClientName,PhoneNumber,Comment")] Booking booking)
+        public async Task<IActionResult> Confirm(int id, string clientName, string phoneNumber, string comment)
         {
-            var existingBooking = await _context.Bookings.FindAsync(id);
-            if (existingBooking == null)
+            var booking = await _context.Bookings.FindAsync(id);
+            if (booking == null || !booking.IsAvailable)
+            {
                 return NotFound();
+            }
 
-            existingBooking.ClientName = booking.ClientName;
-            existingBooking.PhoneNumber = booking.PhoneNumber;
-            existingBooking.Comment = booking.Comment;
-            existingBooking.IsAvailable = false;
+            booking.ClientName = clientName;
+            booking.PhoneNumber = phoneNumber;
+            booking.Comment = comment;
+            booking.IsAvailable = false;
 
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index)); // Возвращаемся обратно на страницу бронирования
+            return RedirectToAction(nameof(Index));
         }
     }
 }

@@ -1,0 +1,42 @@
+﻿@model IEnumerable<DMassage.Models.Booking>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Доступные сеансы массажа";
+}
+
+<h2>Доступные сеансы массажа</h2>
+
+
+    <a href="@Url.Action("Create", "Booking")" class="btn btn-info mb-3">Добавить новый сеанс</a>
+
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Дата и время</th>
+            <th>Клиент</th>
+            <th>Телефон</th>
+            <th>Комментарий</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.SlotDate.ToString("dd/MM/yyyy hh:mm tt")</td>
+                <td>@item.ClientName</td>
+                <td>@item.PhoneNumber</td>
+                <td>@item.Comment</td>
+                <td>
+                    @if (item.IsAvailable)
+                    {
+                        <a href="@Url.Action("Confirm", "Booking", new { id = item.Id })" class="btn btn-success">Записаться</a>                    
+                        <a href="@Url.Action("Edit", "Booking", new { id = item.Id })" class="btn btn-warning">Изменить</a>
+                        <a href="@Url.Action("Delete", "Booking", new { id = item.Id })" onclick="return confirm('Вы действительно хотите удалить этот сеанс?');" class="btn btn-danger">Удалить</a>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
