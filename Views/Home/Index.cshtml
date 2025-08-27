@@ -37,6 +37,11 @@
             color: white;
         }
 
+        .btn-outline-primary {
+            color: #007bff;
+            border-color: #007bff;
+        }
+
         .btn:hover {
             transform: scale(1.05);
         }
@@ -45,7 +50,17 @@
 <body>
     <h1>Кабинет массажа DMassage</h1>
     <p>Профессиональный уход и забота о вашем здоровье.</p>
+
     <a href="@Url.Action("Index", "Massage")" class="btn btn-primary">Наши услуги</a>
     <a href="@Url.Action("Index", "Booking")" class="btn btn-success">Записаться на сеанс</a>
+
+    @if (User.Identity.IsAuthenticated)
+    {
+        <a href="@Url.Action("Logout", "Account")" class="btn btn-outline-primary">Выход</a>
+    }
+    else
+    {
+        <a href="@Url.Action("Login", "Account")" class="btn btn-outline-primary">Вход</a>
+    }
 </body>
 </html>
