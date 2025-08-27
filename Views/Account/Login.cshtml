@@ -1,0 +1,25 @@
+﻿@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Авторизация";
+}
+
+<h2>Вход в систему</h2>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["ErrorMessage"]
+    </div>
+}
+
+<form asp-action="Login" method="post">
+    <div class="mb-3">
+        <label for="Username" class="form-label">Имя пользователя:</label>
+        <input type="text" class="form-control" id="Username" name="Username" required autofocus />
+    </div>
+    <div class="mb-3">
+        <label for="Password" class="form-label">Пароль:</label>
+        <input type="password" class="form-control" id="Password" name="Password" required />
+    </div>
+    <button type="submit" class="btn btn-primary">Войти</button>
+</form>
